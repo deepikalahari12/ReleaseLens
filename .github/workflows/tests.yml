@@ -4,7 +4,6 @@ name: ReleaseLens CI
 on:
   push:
   pull_request:
-  workflow_dispatch:
 
 jobs:
   test:
@@ -24,12 +23,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      - name: Run readiness tests
+      - name: Run automated tests
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
         run: |
-        python -m pytest test_app.py test_release_health.py test_data_sources.py -v
+          python -m pytest test_app.py test_release_health.py test_data_sources.py -v
+
       - name: Check Python syntax
         run: |
           python -m compileall -q app.py data_sources.py github_integration.py release_traceability.py release_health.py
-          
