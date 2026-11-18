@@ -630,10 +630,10 @@ def main():
                     )
 
             st.caption(
-                "Analysis is performed separately for each "
-                "source. Simulated verification records are "
-                "demonstration data, not real Scania evidence."
-            )
+                      "Analysis is performed separately for each "
+                      "source. Simulated verification records are "
+                      "used for demonstration purposes."
+)
 
 
 
