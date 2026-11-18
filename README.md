@@ -41,6 +41,7 @@ The dashboard calculates release readiness:
 - Ready: Both build and tests passed
 - Blocked: Build or tests failed
 - Pending: Builds or tests are incomplete
+  
 In addition to sample release records, ReleaseLens retrieves real GitHub Actions workflow data through the GitHub REST API. Workflow evidence is stored in SQLite and can be retrieved using commit identifiers. The application evaluates CI workflow results and provides explanatory health assessments. Successful CI execution is not treated as proof of deployment readiness.
 
 ## Installation
