@@ -58,9 +58,23 @@ Open http://localhost:8501.
 
 ## Project Status
 
-Working demonstration prototype.
+ReleaseLens is a working software release monitoring prototype.
 
-The dashboard currently uses sample release data stored in SQLite. Live integration with GitHub Actions or other CI/CD systems is not implemented.
+### Implemented Features
+- Interactive release monitoring dashboard using Streamlit.
+- Live integration with GitHub Actions through the GitHub REST API.
+- Retrieval of real CI workflow runs, commit IDs, branches, and execution results.
+- SQLite storage of CI workflow evidence.
+- Commit-based workflow traceability.
+- Evidence-based CI health assessments.
+- Automated testing using pytest and GitHub Actions.
+
+### Current Limitations
+- Sample release records are not yet fully linked to real CI workflow evidence.
+- Deployment readiness is not independently verified.
+- Other CI/CD platforms are not currently integrated.
+
+The prototype is under active development
 
 ## Validation
 
@@ -72,6 +86,7 @@ Four readiness scenarios were checked successfully using Python assertions:
 4. Failed build → Blocked
 
 The pytest runner encountered an internal error in the local environment, so these checks were verified directly using Python.
+The repository also contains automated pytest tests for release-readiness and CI health assessment logic, executed successfully through GitHub Actions.
 
 ## Author
 
