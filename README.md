@@ -7,7 +7,7 @@ ReleaseLens is a Python-based prototype for monitoring software release status a
 
 - Release overview dashboard
 - Build and automated test status monitoring
-- Deployment status visibility
+- Sample deployment status visibility (live deployment verification not implemented)
 - Source commit traceability
 - Release readiness assessment
 - SQLite-backed release records
@@ -15,11 +15,16 @@ ReleaseLens is a Python-based prototype for monitoring software release status a
 
 ## Technologies
 
+## Technologies
+
 - Python
 - Streamlit
 - SQLite
 - Pandas
-- Python assertions for readiness validation
+- Requests (GitHub REST API)
+- pytest
+- Git and GitHub
+- GitHub Actions (CI)
 
 ## How It Works
 
@@ -38,6 +43,7 @@ The dashboard calculates release readiness:
 - Ready: Both build and tests passed
 - Blocked: Build or tests failed
 - Pending: Builds or tests are incomplete
+- In addition to sample release records, ReleaseLens retrieves real GitHub Actions workflow data through the GitHub REST API. Workflow evidence is stored in SQLite and can be retrieved using commit identifiers. The application evaluates CI workflow results and provides explanatory health assessments. Successful CI execution is not treated as proof of deployment readiness.
 
 ## Installation
 
