@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from github_integration import fetch_workflow_runs
+from github_integration import fetch_workflow_runs, fetch_github_releases
 
 
 from release_traceability import (
@@ -13,6 +13,10 @@ from release_traceability import (
     get_workflows_for_commit
 )
 from release_health import assess_release_health
+from data_sources import (
+    normalize_github_runs,
+    normalize_sample_records,
+)
 # ==========================================
 # DATABASE CONFIGURATION
 # ==========================================
@@ -165,6 +169,126 @@ def main():
 
     
 
+    # ======================================
+    # REAL RELEASE HEALTH OVERVIEW
+    # ======================================
+
+    st.header("Real Release Health Overview")
+    st.caption(
+        "Live GitHub release and CI evidence. "
+        "Deployment status is not independently verified."
+    )
+
+    try:
+        real_releases = fetch_github_releases()
+        live_runs = fetch_workflow_runs()
+
+        if real_releases:
+            release_names = [
+                item["version"] for item in real_releases
+            ]
+
+            chosen_version = st.selectbox(
+                "Select a published GitHub release",
+                release_names,
+                key="real_release_selector"
+            )
+
+            selected_real_release = next(
+                item for item in real_releases
+                if item["version"] == chosen_version
+            )
+
+            full_sha = selected_real_release.get(
+                "commit_sha"
+            ) or ""
+
+            evidence = [
+                run for run in live_runs
+                if full_sha
+                and run.get("full_commit_sha") == full_sha
+            ]
+
+            assessment = assess_release_health(evidence)
+
+            col1, col2, col3 = st.columns(3)
+
+            col1.metric(
+                "Release",
+                chosen_version
+            )
+
+            col2.metric(
+                "CI Health",
+                assessment["status"]
+            )
+
+            col3.metric(
+                "Deployment",
+                assessment["deployment"]
+            )
+
+            st.subheader("Analysis Outcome")
+
+            if assessment["status"] == "CI Passed":
+                st.success(assessment["reason"])
+            elif assessment["status"] == "CI Failed":
+                st.error(assessment["reason"])
+            else:
+                st.warning(assessment["reason"])
+
+            st.info(
+                "Assessment: CI evidence is evaluated "
+                "for the selected release commit. "
+                "Successful CI does not establish "
+                "deployment readiness."
+            )
+
+            st.write(
+                "**Release Commit:**",
+                full_sha[:7] if full_sha else "Unavailable"
+            )
+
+            st.write(
+                "**Matching CI Workflows:**",
+                len(evidence)
+            )
+
+            if evidence:
+                st.subheader("Supporting CI Evidence")
+                st.dataframe(
+                    pd.DataFrame(evidence),
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "url": st.column_config.LinkColumn(
+                            "Workflow Evidence"
+                        )
+                    }
+                )
+            else:
+                st.warning(
+                    "No matching CI evidence found "
+                    "among the retrieved workflow runs."
+                )
+
+            if selected_real_release.get("url"):
+                st.link_button(
+                    "View Release on GitHub",
+                    selected_real_release["url"]
+                )
+
+        else:
+            st.info(
+                "No published GitHub releases found."
+            )
+
+    except Exception as error:
+        st.error(
+            f"Unable to load real release evidence: {error}"
+        )
+
+
     st.divider()
 
     # ======================================
@@ -188,22 +312,22 @@ def main():
     col1, col2, col3, col4 = st.columns(4)
 
     col1.metric(
-        "Total Releases",
+        "Sample Releases",
         total_releases
     )
 
     col2.metric(
-        "Ready Releases",
+        "Sample Ready",
         ready_releases
     )
 
     col3.metric(
-        "Blocked Releases",
+        "Sample Blocked",
         blocked_releases
     )
 
     col4.metric(
-        "Deployed Releases",
+        "Sample Deployed",
         deployed_releases
     )
 
@@ -213,7 +337,11 @@ def main():
     # RELEASE OVERVIEW
     # ======================================
 
-    st.header("Release Overview")
+    st.header("Sample Release Overview")
+    st.caption(
+    "Demonstration records stored in SQLite. "
+    "These are not verified production releases."
+)
 
     st.dataframe(
         df[
@@ -234,7 +362,7 @@ def main():
     # READINESS CHART
     # ======================================
 
-    st.header("Release Readiness Distribution")
+    st.header("Sample Release Readiness Distribution")
 
     readiness_counts = (
         df["readiness"].value_counts()
@@ -392,10 +520,212 @@ def main():
         if workflow_runs:
             workflow_df = pd.DataFrame(workflow_runs)
 
+            # Multi-source data demonstration
+            st.subheader("Multi-Source Data Integration")
+
+            sample_records = [
+                {
+                    "reference": "VER-001",
+                    "status": "completed",
+                    "result": "success",
+                    "timestamp": "2026-11-18T09:00:00Z"
+                },
+                {
+                    "reference": "VER-002",
+                    "status": "completed",
+                    "result": "failure",
+                    "timestamp": "2026-11-18T10:00:00Z"
+                },
+                {
+                    "reference": "VER-003",
+                    "status": "in_progress",
+                    "result": None,
+                    "timestamp": "2026-11-18T11:00:00Z"
+                }
+            ]
+
+            github_data = normalize_github_runs(
+                workflow_runs
+            )
+            sample_data = normalize_sample_records(
+                sample_records
+            )
+
+            combined_df = pd.DataFrame(
+                github_data + sample_data
+            )
+
+            st.caption(
+                "Demonstrates a common data format for "
+                "real GitHub Actions runs and simulated "
+                "verification-system records. "
+                "Sample records are not Scania data."
+            )
+
+            st.dataframe(
+                combined_df,
+                use_container_width=True,
+                hide_index=True
+            )
+
+            source_counts = (
+                combined_df.groupby(
+                    ["source", "result"],
+                    dropna=False
+                )
+                .size()
+                .reset_index(name="count")
+            )
+
+            st.subheader("Verification Outcomes by Source")
+
+            st.bar_chart(
+                source_counts,
+                x="source",
+                y="count",
+                color="result"
+            )
+
+            st.subheader("Cross-Source Analysis")
+
+            source_summary = (
+                combined_df.assign(
+                    outcome=combined_df["result"].fillna("pending")
+                )
+                .groupby(["source", "outcome"])
+                .size()
+                .unstack(fill_value=0)
+            )
+
+            st.dataframe(
+                source_summary,
+                use_container_width=True
+            )
+
+            for source, group in combined_df.groupby("source"):
+                failures = (
+                    group["result"] == "failure"
+                ).sum()
+
+                incomplete = (
+                    group["status"] != "completed"
+                ).sum()
+
+                if failures > 0:
+                    st.warning(
+                        f"{source}: {failures} failed record(s). "
+                        "Investigate the failed verification evidence."
+                    )
+
+                if incomplete > 0:
+                    st.warning(
+                        f"{source}: {incomplete} incomplete record(s). "
+                        "Wait for verification to finish."
+                    )
+
+                if failures == 0 and incomplete == 0:
+                    st.success(
+                        f"{source}: no failed or incomplete "
+                        "records in the retrieved dataset."
+                    )
+
+            st.caption(
+                "Analysis is performed separately for each "
+                "source. Simulated verification records are "
+                "demonstration data, not real Scania evidence."
+            )
+
+
+
+            # Visualize actual GitHub Actions results
+            st.subheader("Live CI Workflow Results")
+
+            ci_counts = (
+                workflow_df["conclusion"]
+                .fillna("Pending")
+                .value_counts()
+            )
+
+            st.bar_chart(
+                ci_counts,
+                x_label="Workflow Outcome",
+                y_label="Number of Workflow Runs"
+            )
+
+            successful = (
+                workflow_df["conclusion"] == "success"
+            ).sum()
+
+            completed = (
+                workflow_df["status"] == "completed"
+            ).sum()
+
+            if completed > 0:
+                success_rate = successful / completed * 100
+                st.metric(
+                    "Completed Workflow Success Rate",
+                    f"{success_rate:.1f}%"
+                )
+
+
             st.metric(
                 "Workflow Runs Retrieved",
                 len(workflow_df)
             )
+
+            st.subheader("CI Analysis and Recommendations")
+
+            failed = (
+                workflow_df["conclusion"] == "failure"
+            ).sum()
+
+            pending = (
+                workflow_df["status"] != "completed"
+            ).sum()
+
+            if failed > 0:
+                st.error(
+                    f"{failed} failed workflow run(s) detected."
+                )
+                st.write(
+                    "**Recommended action:** Investigate failed "
+                    "workflows and review their logs."
+                )
+
+            elif pending > 0:
+                st.warning(
+                    f"{pending} workflow run(s) are incomplete."
+                )
+                st.write(
+                    "**Recommended action:** Wait for CI "
+                    "verification before making a decision."
+                )
+
+            elif successful == len(workflow_df):
+                st.success(
+                    "All retrieved CI workflow runs passed."
+                )
+                st.write(
+                    "**Analysis outcome:** No CI failures were "
+                    "detected in the retrieved workflow history."
+                )
+                st.write(
+                    "**Recommended action:** Review additional "
+                    "quality and deployment evidence before "
+                    "approving release readiness."
+                )
+
+            else:
+                st.info(
+                    "Some workflow outcomes require further review."
+                )
+
+            st.caption(
+                "Analysis covers only the recently retrieved "
+                "GitHub Actions runs, not all historical "
+                "verification evidence."
+            )
+
 
             st.dataframe(
                 workflow_df,
