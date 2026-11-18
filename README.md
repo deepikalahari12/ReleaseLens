@@ -15,8 +15,6 @@ ReleaseLens is a Python-based prototype for monitoring software release status a
 
 ## Technologies
 
-## Technologies
-
 - Python
 - Streamlit
 - SQLite
