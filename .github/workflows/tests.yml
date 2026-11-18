@@ -28,7 +28,7 @@ jobs:
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
         run: |
-          python -m pytest test_app.py -v
+          python -m pytest test_app.py test_release_health.py -v
 
       - name: Check Python syntax
         run: |

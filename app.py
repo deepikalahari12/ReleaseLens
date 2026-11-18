@@ -5,6 +5,14 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from github_integration import fetch_workflow_runs
+
+
+from release_traceability import (
+    save_workflow_runs,
+    get_workflows_for_commit
+)
+from release_health import assess_release_health
 # ==========================================
 # DATABASE CONFIGURATION
 # ==========================================
@@ -147,11 +155,15 @@ def main():
         "Software Release Visibility Platform"
     )
 
+        
     st.info(
-        "Demonstration dashboard using sample "
-        "release data stored in SQLite. "
-        "No live CI/CD integration."
+        "ReleaseLens combines sample release records "
+        "stored in SQLite with live GitHub Actions "
+        "workflow data. Release readiness is currently "
+        "calculated from the sample records."
     )
+
+    
 
     st.divider()
 
@@ -238,6 +250,46 @@ def main():
 
     st.header("Release Traceability")
 
+    st.subheader("Live Workflow Traceability")
+
+    selected_commit = st.text_input(
+        "Enter a GitHub commit SHA",
+        value="be820ef"
+    )
+
+    if selected_commit:
+        matching_runs = get_workflows_for_commit(
+            selected_commit.strip()
+        )
+
+        if matching_runs:
+            st.success(
+                f"Found {len(matching_runs)} workflow run(s)"
+            )
+
+            st.dataframe(
+                pd.DataFrame(matching_runs),
+                width="stretch",
+                hide_index=True
+            )
+
+
+            st.subheader("Evidence-Based Release Health")
+
+            assessment = assess_release_health(matching_runs)
+
+            st.write("**CI Health:**", assessment["status"])
+            st.write("**Assessment Reason:**", assessment["reason"])
+            st.write("**Deployment Status:**", assessment["deployment"])
+
+        else:
+            st.info(
+                "No stored workflow evidence "
+                "found for this commit."
+            )
+
+    st.divider()
+
     selected_version = st.selectbox(
         "Select a release",
         df["version"].tolist()
@@ -313,6 +365,61 @@ def main():
     )
 
     st.divider()
+
+    
+    # ======================================
+    # LIVE GITHUB ACTIONS MONITORING
+    # ======================================
+
+    st.header("Live GitHub Actions Monitoring")
+
+    st.info(
+        "Real workflow data retrieved from the "
+        "public ReleaseLens GitHub repository."
+    )
+
+    if st.button("Refresh GitHub Workflows"):
+        st.rerun()
+
+    try:
+
+
+    
+        workflow_runs = fetch_workflow_runs()
+        save_workflow_runs(workflow_runs)
+
+
+        if workflow_runs:
+            workflow_df = pd.DataFrame(workflow_runs)
+
+            st.metric(
+                "Workflow Runs Retrieved",
+                len(workflow_df)
+            )
+
+            st.dataframe(
+                workflow_df,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "url": st.column_config.LinkColumn(
+                        "GitHub Workflow Link"
+                    )
+                }
+            )
+
+        else:
+            st.warning(
+                "No GitHub Actions workflow runs found."
+            )
+
+    except Exception as error:
+        st.error(
+            f"Unable to retrieve GitHub Actions data: {error}"
+        )
+
+    st.divider()
+
 
     st.caption(
         "ReleaseLens | Software Release "
