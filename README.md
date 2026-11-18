@@ -72,6 +72,12 @@ ReleaseLens is a working software release monitoring prototype.
 - Commit-based workflow traceability.
 - Evidence-based CI health assessments.
 - Automated testing using pytest and GitHub Actions.
+-  Real GitHub release-to-CI traceability using full commit SHAs.
+- Interactive release-health overview with evidence-based CI assessments.
+- Live CI workflow outcome visualization and success-rate analysis.
+- Multi-source normalization of GitHub Actions data and simulated verification records.
+- Cross-source outcome comparisons with failure and incomplete-verification recommendations.
+- Automated validation with 13 passing tests in GitHub Actions.
 
 ### Current Limitations
 - Sample release records are not yet fully linked to real CI workflow evidence.
